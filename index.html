@@ -1,0 +1,104 @@
+<!DOCTYPE html>
+<html>
+	<head>
+		<meta charset="utf-8"/>
+		<title>刮刮乐特效</title>
+		<style>
+			*{margin: 0;padding: 0;}
+			#box
+			{
+				height:190px;
+				width:670px;
+				margin:160px auto;
+			}
+		</style>
+	</head>
+	<body>
+		<div id="box">
+			<img src="img/failed.png" id="img"/><br />
+		         刮开面积提示框：<input type="text" id="txt" size="23"/>
+		</div>
+		<script>
+			//想彻底实现得奖功能需要后端给给数据，前端通过ajax进行请求
+			var oImg=document.getElementById('img');
+			var can=document.createElement('canvas');
+			var oTxt=document.getElementById('txt');
+			//需要图片加载完成再进行，图片加载是需要时间的，此点极为重要
+			oImg.onload=function()
+			{
+				can.style.position='absolute';
+				can.style.left=oImg.offsetLeft+'px';
+				can.style.top=oImg.offsetTop+'px';
+				can.height=oImg.height;
+				can.width=oImg.width;
+				oImg.parentNode.insertBefore(can,oImg);
+				
+				//绘制图片
+				var cxt=can.getContext('2d');
+				var img=new Image();
+				img.src='img/init.png';
+				img.onload=function()
+				{
+					cxt.drawImage(img,0,0);//绘制图片(坐标)左上角
+					can.onmousedown=function(ev)
+					{
+						var ev=ev||event;
+						var x=ev.clientX-can.offsetLeft;
+						var y=ev.clientY-can.offsetTop;
+						cxt.beginPath();//开始路径
+						cxt.arc(x,y,15,0,Math.PI*2,false);
+						cxt.fill();
+						//画圆是不可以的，画出来全是bug
+						can.onmousemove=function(ev)
+						{
+							var ev=ev||event;
+							var x1=ev.clientX-can.offsetLeft;
+							var y1=ev.clientY-can.offsetTop;
+							cxt.beginPath();//开始路径
+							cxt.lineWidth=30;
+							cxt.lineCap='round';//交叉点圆角
+							
+							//设置合成属性，让先后绘制的图像重复部分什么都不显示
+							cxt.globalCompositeOperation='destination-out';
+							cxt.moveTo(x,y);
+							cxt.lineTo(x1,y1);
+							cxt.stroke();//触笔方法，绘制线条
+							x=x1;
+							y=y1;
+							/*同源问题即浏览器安全策略不同，谷歌浏览器要求所有来源都要来自同一域名，而谷歌
+							浏览器不要求这些，可以通过使用本地服务器来解决*/
+						}; 
+						can.onmouseup=function()
+						{
+							this.onmousemove=null;
+							this.onmouseup=null;
+							check();
+						};
+						function check()
+						{
+							//获取所有像素点
+							var data=cxt.getImageData(0,0,can.width,can.height).data;	
+							var n=0;//用于存放像素点，即rgba()
+							for(var i=0;i<data.length-3;i+=4)
+							{
+								if(data[i]==0&&data[i+1]==0&&data[i+2]==0&&data[i+3]==0)
+								{
+									n++;
+								}
+							}
+							var s=n*100/(can.height*can.width);
+							oTxt.value='刮开面积'+s.toFixed(2)+'%';
+							
+							if(s>60)
+							{
+								cxt.beginPath();
+								cxt.fillRect(0,0,can.width,can.height);
+								oTxt.value='刮开面积大于60%，全部显示！';
+							}
+						};
+					};
+				};
+			}
+		</script>
+	</body>
+</html>
